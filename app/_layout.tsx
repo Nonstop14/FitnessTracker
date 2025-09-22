@@ -1,24 +1,42 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import { Stack } from "expo-router";
+import { WorkoutsProvider } from "./context/WorkoutsContext";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <WorkoutsProvider>
+      <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen
+          name="workouts/new"
+          options={{
+            title: "Add Workout",
+            headerBackTitle: "Back",
+            headerStyle: { backgroundColor: "#0f172a" },
+            headerTitleStyle: { color: "#e2e8f0" },
+            headerTintColor: "#e2e8f0",
+          }}
+        />
+        <Stack.Screen
+          name="workouts/[id]"
+          options={{
+            title: "Workout",
+            headerBackTitle: "Back",
+            headerStyle: { backgroundColor: "#0f172a" },
+            headerTitleStyle: { color: "#e2e8f0" },
+            headerTintColor: "#e2e8f0",
+          }}
+        />
+        <Stack.Screen
+          name="workouts/[id]/edit"
+          options={{
+            title: "Edit Workout",
+            headerBackTitle: "Back",
+            headerStyle: { backgroundColor: "#0f172a" },
+            headerTitleStyle: { color: "#e2e8f0" },
+            headerTintColor: "#e2e8f0",
+          }}
+        />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </WorkoutsProvider>
   );
 }
