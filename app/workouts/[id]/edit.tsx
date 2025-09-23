@@ -89,7 +89,7 @@ export default function EditWorkout() {
       <ScrollView
         ref={scrollRef}
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: keyboardHeight + 20 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 32 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
       >
@@ -114,7 +114,7 @@ export default function EditWorkout() {
               onFocus={() => {
                 setTimeout(() => {
                   const y = positionsRef.current[ex.id] ?? 0;
-                  const scrollOffset = y - 50; // Less space above the input
+                  const scrollOffset = y - 20; // Minimal space above the input
                   scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
                 }, 100);
               }}
@@ -130,7 +130,7 @@ export default function EditWorkout() {
                 onFocus={() => {
                   setTimeout(() => {
                     const y = positionsRef.current[ex.id] ?? 0;
-                    const scrollOffset = y - 50; // Less space above the input
+                    const scrollOffset = y - 20; // Minimal space above the input
                     scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
                   }, 100);
                 }}

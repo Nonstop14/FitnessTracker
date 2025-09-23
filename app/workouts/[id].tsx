@@ -48,6 +48,13 @@ export default function WorkoutDetail() {
           <Text style={styles.rowSets}>{e.sets} sets</Text>
         </View>
       ))}
+      
+      <Pressable 
+        style={styles.startWorkoutButton}
+        onPress={() => router.push(`/workouts/${workout.id}/start`)}
+      >
+        <Text style={styles.startWorkoutButtonText}>Start Workout</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -71,6 +78,24 @@ const styles = StyleSheet.create({
   },
   rowText: { fontSize: 16, fontWeight: "600", color: "#e5e7eb" },
   rowSets: { fontSize: 14, color: "#cbd5e1", fontWeight: "600" },
+  startWorkoutButton: {
+    marginTop: 24,
+    backgroundColor: "#16a34a",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#16a34a",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  startWorkoutButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
 });
 
 

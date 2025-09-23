@@ -36,6 +36,16 @@ export default function RootLayout() {
             headerTintColor: "#e2e8f0",
           }}
         />
+        <Stack.Screen
+          name="workouts/[id]/start"
+          options={{
+            title: "Start Workout",
+            headerBackTitle: "Back",
+            headerStyle: { backgroundColor: "#0f172a" },
+            headerTitleStyle: { color: "#e2e8f0" },
+            headerTintColor: "#e2e8f0",
+          }}
+        />
       </Stack>
     </WorkoutsProvider>
   );

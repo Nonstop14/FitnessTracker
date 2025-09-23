@@ -13,17 +13,38 @@ export type WorkoutPlan = {
   exercises: WorkoutExercise[];
 };
 
+export type CompletedSet = {
+  setNumber: number;
+  reps: number;
+};
+
+export type CompletedExercise = {
+  exerciseName: string;
+  sets: CompletedSet[];
+};
+
+export type CompletedWorkout = {
+  id: string;
+  workoutName: string;
+  completedAt: number;
+  duration: number; // in seconds
+  exercises: CompletedExercise[];
+};
+
 type WorkoutsContextValue = {
   workouts: WorkoutPlan[];
+  completedWorkouts: CompletedWorkout[];
   addWorkout: (workout: Omit<WorkoutPlan, "id" | "createdAt">) => WorkoutPlan;
   updateWorkout: (id: string, updates: Partial<Omit<WorkoutPlan, "id" | "createdAt">>) => void;
   deleteWorkout: (id: string) => void;
+  addCompletedWorkout: (workout: Omit<CompletedWorkout, "id">) => CompletedWorkout;
 };
 
 const WorkoutsContext = createContext<WorkoutsContextValue | undefined>(undefined);
 
 export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
   const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
+  const [completedWorkouts, setCompletedWorkouts] = useState<CompletedWorkout[]>([]);
 
   const addWorkout = useCallback(
     (workout: Omit<WorkoutPlan, "id" | "createdAt">) => {
@@ -48,9 +69,21 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
     setWorkouts((prev) => prev.filter((w) => w.id !== id));
   }, []);
 
+  const addCompletedWorkout = useCallback(
+    (workout: Omit<CompletedWorkout, "id">) => {
+      const newCompletedWorkout: CompletedWorkout = {
+        id: Math.random().toString(36).slice(2),
+        ...workout,
+      };
+      setCompletedWorkouts((prev) => [newCompletedWorkout, ...prev]);
+      return newCompletedWorkout;
+    },
+    []
+  );
+
   const value = useMemo(
-    () => ({ workouts, addWorkout, updateWorkout, deleteWorkout }),
-    [workouts, addWorkout, updateWorkout, deleteWorkout]
+    () => ({ workouts, completedWorkouts, addWorkout, updateWorkout, deleteWorkout, addCompletedWorkout }),
+    [workouts, completedWorkouts, addWorkout, updateWorkout, deleteWorkout, addCompletedWorkout]
   );
 
   return <WorkoutsContext.Provider value={value}>{children}</WorkoutsContext.Provider>;
