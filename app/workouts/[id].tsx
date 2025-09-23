@@ -1,9 +1,10 @@
-import { Link, useLocalSearchParams } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useWorkouts } from "../../context/WorkoutsContext";
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { workouts, deleteWorkout } = useWorkouts();
   const workout = workouts.find((w) => w.id === id);
 
@@ -32,6 +33,7 @@ export default function WorkoutDetail() {
                 style: "destructive",
                 onPress: () => {
                   deleteWorkout(workout.id);
+                  router.back(); // Navigate back to home screen
                 },
               },
             ]);

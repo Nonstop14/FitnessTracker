@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useWorkouts } from "../../../context/WorkoutsContext";
 
 export default function EditWorkout() {
@@ -13,6 +13,7 @@ export default function EditWorkout() {
   const [exercises, setExercises] = useState<Array<{ id: string; exerciseName: string; sets: string }>>([]);
   const scrollRef = useRef<ScrollView | null>(null);
   const positionsRef = useRef<Record<string, number>>({});
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     if (workout) {
@@ -20,6 +21,20 @@ export default function EditWorkout() {
       setExercises(workout.exercises.map((e) => ({ id: e.id, exerciseName: e.exerciseName, sets: String(e.sets) })));
     }
   }, [workout]);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   function updateExerciseName(exId: string, value: string) {
     setExercises((prev) => prev.map((e) => (e.id === exId ? { ...e, exerciseName: value } : e)));
@@ -66,12 +81,17 @@ export default function EditWorkout() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: "padding", android: undefined })}>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.select({ ios: "padding", android: "height" })}
+      keyboardVerticalOffset={Platform.select({ ios: 0, android: 20 })}
+    >
       <ScrollView
         ref={scrollRef}
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: keyboardHeight + 20 }]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
       >
         <Text style={styles.label}>Workout name</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} />
@@ -92,8 +112,11 @@ export default function EditWorkout() {
               value={ex.exerciseName}
               onChangeText={(t) => updateExerciseName(ex.id, t)}
               onFocus={() => {
-                const y = positionsRef.current[ex.id] ?? 0;
-                scrollRef.current?.scrollTo({ y: Math.max(y - 12, 0), animated: true });
+                setTimeout(() => {
+                  const y = positionsRef.current[ex.id] ?? 0;
+                  const scrollOffset = y - 50; // Less space above the input
+                  scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                }, 100);
               }}
             />
             <View style={styles.setsAndRemove}>
@@ -105,8 +128,11 @@ export default function EditWorkout() {
                 onChangeText={(t) => updateExerciseSets(ex.id, t)}
                 maxLength={2}
                 onFocus={() => {
-                  const y = positionsRef.current[ex.id] ?? 0;
-                  scrollRef.current?.scrollTo({ y: Math.max(y - 12, 0), animated: true });
+                  setTimeout(() => {
+                    const y = positionsRef.current[ex.id] ?? 0;
+                    const scrollOffset = y - 50; // Less space above the input
+                    scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                  }, 100);
                 }}
               />
               <Pressable onPress={() => removeExercise(ex.id)} style={styles.removeButton}>
