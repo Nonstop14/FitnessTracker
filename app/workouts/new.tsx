@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { useWorkouts } from "../context/WorkoutsContext";
+import { useWorkouts } from "../../context/WorkoutsContext";
 
 export default function NewWorkout() {
   const router = useRouter();

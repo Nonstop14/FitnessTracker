@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { useWorkouts } from "../context/WorkoutsContext";
+import { useWorkouts } from "../../context/WorkoutsContext";
 
 export default function HomeScreen() {
   const { workouts } = useWorkouts();

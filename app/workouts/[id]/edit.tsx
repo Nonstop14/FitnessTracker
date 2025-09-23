@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { useWorkouts } from "../../context/WorkoutsContext";
+import { useWorkouts } from "../../../context/WorkoutsContext";
 
 export default function EditWorkout() {
   const { id } = useLocalSearchParams<{ id: string }>();
