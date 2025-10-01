@@ -12,6 +12,7 @@ export default function StartWorkout() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
   const [repCounts, setRepCounts] = useState<Record<string, string>>({});
+  const [weights, setWeights] = useState<Record<string, string>>({});
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView | null>(null);
   const positionsRef = useRef<Record<string, number>>({});
@@ -27,17 +28,20 @@ export default function StartWorkout() {
     return () => clearInterval(interval);
   }, [isRunning]);
 
-  // Initialize rep counts for all sets
+  // Initialize rep counts and weights for all sets
   useEffect(() => {
     if (workout) {
       const initialReps: Record<string, string> = {};
+      const initialWeights: Record<string, string> = {};
       workout.exercises.forEach(exercise => {
         for (let set = 1; set <= exercise.sets; set++) {
           const setKey = `${exercise.id}-${set}`;
           initialReps[setKey] = "";
+          initialWeights[setKey] = "";
         }
       });
       setRepCounts(initialReps);
+      setWeights(initialWeights);
     }
   }, [workout]);
 
@@ -78,6 +82,14 @@ export default function StartWorkout() {
     }));
   };
 
+  const updateWeight = (exerciseId: string, setNumber: number, value: string) => {
+    const setKey = `${exerciseId}-${setNumber}`;
+    setWeights(prev => ({
+      ...prev,
+      [setKey]: value
+    }));
+  };
+
   const handleFinishWorkout = () => {
     // Prepare completed workout data
     const completedExercises = workout.exercises.map(exercise => {
@@ -85,7 +97,8 @@ export default function StartWorkout() {
       for (let setNum = 1; setNum <= exercise.sets; setNum++) {
         const setKey = `${exercise.id}-${setNum}`;
         const reps = parseInt(repCounts[setKey]) || 0;
-        sets.push({ setNumber: setNum, reps });
+        const weight = parseFloat(weights[setKey]) || 0;
+        sets.push({ setNumber: setNum, reps, weight });
       }
       return { exerciseName: exercise.exerciseName, sets };
     });
@@ -161,6 +174,7 @@ export default function StartWorkout() {
             const setNumber = setIndex + 1;
             const setKey = `${exercise.id}-${setNumber}`;
             const currentReps = repCounts[setKey] || "";
+            const currentWeight = weights[setKey] || "";
             
             return (
               <View 
@@ -172,24 +186,45 @@ export default function StartWorkout() {
                 }}
               >
                 <Text style={styles.setLabel}>Set {setNumber}</Text>
-                <View style={styles.repCounter}>
-                  <Text style={styles.repLabel}>Reps:</Text>
-                  <TextInput
-                    style={styles.repInput}
-                    value={currentReps.toString()}
-                    onChangeText={(value) => updateRepCount(exercise.id, setNumber, value)}
-                    keyboardType="number-pad"
-                    placeholder="0"
-                    maxLength={3}
-                    onFocus={() => {
-                      setTimeout(() => {
-                        const setKey = `${exercise.id}-${setNumber}`;
-                        const y = positionsRef.current[setKey] ?? 0;
-                        const scrollOffset = y - 20;
-                        scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                      }, 100);
-                    }}
-                  />
+                <View style={styles.setInputs}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Reps:</Text>
+                    <TextInput
+                      style={styles.setInput}
+                      value={currentReps.toString()}
+                      onChangeText={(value) => updateRepCount(exercise.id, setNumber, value)}
+                      keyboardType="number-pad"
+                      placeholder="0"
+                      maxLength={3}
+                      onFocus={() => {
+                        setTimeout(() => {
+                          const setKey = `${exercise.id}-${setNumber}`;
+                          const y = positionsRef.current[setKey] ?? 0;
+                          const scrollOffset = y - 20;
+                          scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                        }, 100);
+                      }}
+                    />
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Weight (kg):</Text>
+                    <TextInput
+                      style={styles.setInput}
+                      value={currentWeight.toString()}
+                      onChangeText={(value) => updateWeight(exercise.id, setNumber, value)}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      maxLength={6}
+                      onFocus={() => {
+                        setTimeout(() => {
+                          const setKey = `${exercise.id}-${setNumber}`;
+                          const y = positionsRef.current[setKey] ?? 0;
+                          const scrollOffset = y - 20;
+                          scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                        }, 100);
+                      }}
+                    />
+                  </View>
                 </View>
               </View>
             );
@@ -227,12 +262,12 @@ const styles = StyleSheet.create({
   timerText: {
     fontSize: 48,
     fontWeight: "800",
-    color: "#16a34a",
+    color: "#10b981",
     marginBottom: 12,
     fontFamily: "monospace",
   },
   timerButton: {
-    backgroundColor: "#7c3aed",
+    backgroundColor: "#4f46e5",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -267,7 +302,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#1f2937",
   },
@@ -275,23 +310,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#cbd5e1",
+    minWidth: 60,
   },
-  repCounter: {
+  setInputs: {
+    flexDirection: "row",
+    gap: 16,
+    alignItems: "center",
+  },
+  inputGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
-  repLabel: {
+  inputLabel: {
     fontSize: 14,
     color: "#94a3b8",
     fontWeight: "600",
   },
-  repInput: {
+  setInput: {
     backgroundColor: "#1f2937",
     borderWidth: 1,
     borderColor: "#374151",
     borderRadius: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     color: "#e5e7eb",
     fontSize: 16,
@@ -300,14 +341,14 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   finishButton: {
-    backgroundColor: "#dc2626",
+    backgroundColor: "#ef4444",
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: "center",
     marginTop: 20,
-    shadowColor: "#dc2626",
-    shadowOpacity: 0.3,
+    shadowColor: "#ef4444",
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,

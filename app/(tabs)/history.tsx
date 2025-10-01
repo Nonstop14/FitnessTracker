@@ -33,6 +33,12 @@ export default function HistoryScreen() {
     return exercises.reduce((total, exercise) => total + exercise.sets.length, 0);
   };
 
+  const getTotalWeight = (exercises: CompletedWorkout['exercises']) => {
+    return exercises.reduce((total, exercise) => 
+      total + exercise.sets.reduce((sum: number, set) => sum + (set.weight * set.reps), 0), 0
+    );
+  };
+
   const toggleExpanded = (workoutId: string) => {
     setExpandedWorkout(expandedWorkout === workoutId ? null : workoutId);
   };
@@ -65,6 +71,11 @@ export default function HistoryScreen() {
               <Text style={styles.statsText}>
                 {getTotalSets(workout.exercises)} sets • {getTotalReps(workout.exercises)} reps
               </Text>
+              {getTotalWeight(workout.exercises) > 0 && (
+                <Text style={styles.weightStats}>
+                  {getTotalWeight(workout.exercises).toFixed(1)}kg total
+                </Text>
+              )}
             </View>
             <Text style={styles.expandIcon}>
               {expandedWorkout === workout.id ? '▼' : '▶'}
@@ -83,6 +94,9 @@ export default function HistoryScreen() {
                       <View key={setIndex} style={styles.setItem}>
                         <Text style={styles.setNumber}>Set {set.setNumber}</Text>
                         <Text style={styles.repCount}>{set.reps} reps</Text>
+                        {set.weight > 0 && (
+                          <Text style={styles.weightText}>{set.weight}kg</Text>
+                        )}
                       </View>
                     ))}
                   </View>
@@ -157,12 +171,18 @@ const styles = StyleSheet.create({
   duration: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#16a34a",
+    color: "#10b981",
     marginBottom: 2,
   },
   statsText: {
     fontSize: 12,
     color: "#94a3b8",
+  },
+  weightStats: {
+    fontSize: 12,
+    color: "#6366f1",
+    fontWeight: "600",
+    marginTop: 2,
   },
   expandIcon: {
     fontSize: 12,
@@ -206,6 +226,11 @@ const styles = StyleSheet.create({
   repCount: {
     fontSize: 12,
     color: "#e5e7eb",
+    fontWeight: "700",
+  },
+  weightText: {
+    fontSize: 12,
+    color: "#6366f1",
     fontWeight: "700",
   },
 });

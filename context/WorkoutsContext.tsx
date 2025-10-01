@@ -16,6 +16,7 @@ export type WorkoutPlan = {
 export type CompletedSet = {
   setNumber: number;
   reps: number;
+  weight: number; // in kg
 };
 
 export type CompletedExercise = {

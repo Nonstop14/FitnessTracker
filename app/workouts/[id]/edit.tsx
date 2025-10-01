@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   removeText: { color: "#ef4444", fontSize: 18, fontWeight: "700" },
   saveButton: {
     marginTop: 20,
-    backgroundColor: "#7c3aed",
+    backgroundColor: "#6366f1",
     paddingVertical: 14,
     alignItems: "center",
     borderRadius: 12,
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   muted: { color: "#94a3b8" },
   addExerciseButton: {
     marginTop: 12,
-    backgroundColor: "#7c3aed",
+    backgroundColor: "#6366f1",
     paddingVertical: 12,
     alignItems: "center",
     borderRadius: 12,
