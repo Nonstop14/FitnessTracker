@@ -1,10 +1,13 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import SimpleCalendar from "../../components/SimpleCalendar";
 import { CompletedWorkout, useWorkouts } from "../../context/WorkoutsContext";
 
 export default function HistoryScreen() {
   const { completedWorkouts } = useWorkouts();
   const [expandedWorkout, setExpandedWorkout] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -43,6 +46,34 @@ export default function HistoryScreen() {
     setExpandedWorkout(expandedWorkout === workoutId ? null : workoutId);
   };
 
+  // Create marked dates for calendar
+  const getMarkedDates = () => {
+    const markedDates: { [key: string]: any } = {};
+    
+    completedWorkouts.forEach((workout) => {
+      const date = new Date(workout.completedAt);
+      const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      markedDates[dateString] = {
+        marked: true,
+        dotColor: '#10b981',
+        selectedColor: '#10b981',
+        selected: false,
+      };
+    });
+    
+    return markedDates;
+  };
+
+  // Get workout count for a specific date
+  const getWorkoutsForDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return completedWorkouts.filter(workout => {
+      const workoutDate = new Date(workout.completedAt);
+      return workoutDate.toDateString() === date.toDateString();
+    });
+  };
+
   if (completedWorkouts.length === 0) {
     return (
       <View style={styles.container}>
@@ -54,7 +85,15 @@ export default function HistoryScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Workout History</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Workout History</Text>
+        <Pressable 
+          style={styles.calendarButton}
+          onPress={() => setShowCalendar(true)}
+        >
+          <Ionicons name="calendar-outline" size={24} color="#6366f1" />
+        </Pressable>
+      </View>
       
       {completedWorkouts.map((workout: CompletedWorkout) => (
         <View key={workout.id} style={styles.workoutCard}>
@@ -106,6 +145,45 @@ export default function HistoryScreen() {
           )}
         </View>
       ))}
+
+      {/* Calendar Modal */}
+      <Modal
+        visible={showCalendar}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCalendar(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.calendarModal}>
+            <View style={styles.calendarHeader}>
+              <Text style={styles.calendarTitle}>Workout Calendar</Text>
+              <Pressable 
+                style={styles.closeButton}
+                onPress={() => setShowCalendar(false)}
+              >
+                <Ionicons name="close" size={24} color="#94a3b8" />
+              </Pressable>
+            </View>
+            
+             <SimpleCalendar
+               markedDates={getMarkedDates()}
+               onDayPress={(dateString) => {
+                 const workouts = getWorkoutsForDate(dateString);
+                 if (workouts.length > 0) {
+                   const workoutNames = workouts.map(workout => workout.workoutName).join(', ');
+                   alert(`You worked out on ${new Date(dateString).toLocaleDateString()}!\n\nWorkouts: ${workoutNames}`);
+                 }
+               }}
+             />
+            
+            <View style={styles.calendarFooter}>
+              <Text style={styles.calendarFooterText}>
+                Green dots indicate days you worked out
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -119,11 +197,21 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
   title: {
     fontSize: 24,
     fontWeight: "800",
     color: "#e2e8f0",
-    marginBottom: 20,
+  },
+  calendarButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#1f2937",
   },
   emptyText: {
     fontSize: 18,
@@ -232,6 +320,52 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6366f1",
     fontWeight: "700",
+  },
+  // Calendar Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  calendarModal: {
+    backgroundColor: "#111827",
+    borderRadius: 16,
+    padding: 20,
+    width: "100%",
+    maxHeight: "80%",
+    borderWidth: 1,
+    borderColor: "#1f2937",
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1f2937",
+  },
+  calendarTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#e5e7eb",
+  },
+  closeButton: {
+    padding: 4,
+    borderRadius: 4,
+  },
+  calendarFooter: {
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#1f2937",
+    alignItems: "center",
+  },
+  calendarFooterText: {
+    fontSize: 14,
+    color: "#94a3b8",
+    textAlign: "center",
   },
 });
 
