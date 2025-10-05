@@ -1,16 +1,29 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, BackHandler, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import AddExerciseModal from "../../../components/AddExerciseModal";
 import WorkoutTimer from "../../../components/WorkoutTimer";
 import { useWorkouts } from "../../../context/WorkoutsContext";
 
 export default function StartWorkout() {
+  return (
+    <>
+      <Stack.Screen 
+        options={{ 
+          headerShown: true,
+          headerBackVisible: false,
+          headerLeft: () => null
+        }} 
+      />
+      <StartWorkoutContent />
+    </>
+  );
+}
+
+function StartWorkoutContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const navigation = useNavigation();
   const { workouts, addCompletedWorkout, completedWorkouts } = useWorkouts();
   const workout = workouts.find((w) => w.id === id);
   
@@ -85,73 +98,7 @@ export default function StartWorkout() {
     }
   }, [workout]);
 
-  // Back button confirmation using navigation listener
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      // Don't show confirmation if we're finishing the workout
-      if (isFinishingWorkout) {
-        return;
-      }
 
-      // Prevent default behavior of leaving the screen
-      e.preventDefault();
-
-      // Show confirmation dialog
-      Alert.alert(
-        "Exit Workout?",
-        "Are you sure you want to go back to home screen? Your workout progress will be lost.",
-        [
-          { 
-            text: "Stay", 
-            style: "cancel",
-            onPress: () => {
-              // Do nothing, just stay on the screen
-            }
-          },
-          { 
-            text: "Home Screen", 
-            style: "destructive",
-            onPress: () => {
-              // Allow navigation to proceed
-              navigation.dispatch(e.data.action);
-            }
-          }
-        ]
-      );
-    });
-
-    return unsubscribe;
-  }, [navigation, isFinishingWorkout]);
-
-  // Hardware back button for Android
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => {
-        Alert.alert(
-          "Exit Workout?",
-          "Are you sure you want to go back to home screen? Your workout progress will be lost.",
-          [
-            { text: "Stay", style: "cancel" },
-            { 
-              text: "Home Screen", 
-              style: "destructive",
-              onPress: () => {
-                router.dismissAll();
-                router.replace("/(tabs)");
-              }
-            }
-          ]
-        );
-        return true; // Prevent default back action
-      };
-
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-      return () => {
-        subscription?.remove();
-      };
-    }, [router])
-  );
 
   // Keyboard event listeners
   useEffect(() => {
@@ -551,6 +498,25 @@ export default function StartWorkout() {
               </Pressable>
             </Modal>
             
+            {/* Sets Header */}
+            <View style={styles.setsHeader}>
+              <View style={styles.headerSetColumn}>
+                <Text style={styles.headerText}>Set</Text>
+              </View>
+              <View style={styles.headerPreviousColumn}>
+                <Text style={styles.headerText}>Previous</Text>
+              </View>
+              <View style={styles.headerWeightColumn}>
+                <Text style={styles.headerText}>Weight (kg)</Text>
+              </View>
+              <View style={styles.headerRepsColumn}>
+                <Text style={styles.headerText}>Reps</Text>
+              </View>
+              <View style={styles.headerCheckColumn}>
+                <Text style={styles.headerText}>✓</Text>
+              </View>
+            </View>
+
             {/* Sets */}
             {Array.from({ length: setCount }, (_, setIndex) => {
               const setNumber = setIndex + 1;
@@ -569,65 +535,77 @@ export default function StartWorkout() {
                     positionsRef.current[setKey] = e.nativeEvent.layout.y;
                   }}
                 >
-                  <View style={styles.setInfo}>
-                    <Text style={styles.setLabel}>Set {setNumber}</Text>
-                    {previousData && (
-                      <Text style={styles.previousData}>
-                        Last: {previousData.weight}kg × {previousData.reps}
+                  {/* Set Number Column */}
+                  <View style={styles.setNumberColumn}>
+                    <Text style={[styles.setNumberText, isCompleted && styles.completedText]}>
+                      {setNumber}
+                    </Text>
+                  </View>
+
+                  {/* Previous Data Column */}
+                  <View style={styles.previousColumn}>
+                    {previousData ? (
+                      <Text style={[styles.previousDataText, isCompleted && styles.completedText]}>
+                        {previousData.weight}kg × {previousData.reps}
+                      </Text>
+                    ) : (
+                      <Text style={[styles.noPreviousData, isCompleted && styles.completedText]}>
+                        -
                       </Text>
                     )}
                   </View>
-                  
-                  <View style={styles.setInputs}>
-                    <View style={styles.inputColumn}>
-                      <Text style={styles.inputLabel}>Reps</Text>
-                      <TextInput
-                        style={[styles.setInput, isCompleted && styles.completedInput]}
-                        value={currentReps.toString()}
-                        onChangeText={(value) => updateRepCount(exerciseId, setNumber, value)}
-                        keyboardType="number-pad"
-                        placeholder="0"
-                        maxLength={3}
-                        editable={!isCompleted}
-                        onFocus={() => {
-                          setTimeout(() => {
-                            const setKey = `${exerciseId}-${setNumber}`;
-                            const y = positionsRef.current[setKey] ?? 0;
-                            const scrollOffset = y - 20;
-                            scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                          }, 100);
-                        }}
-                      />
-                    </View>
-                    
-                    <View style={styles.inputColumn}>
-                      <Text style={styles.inputLabel}>Weight (kg)</Text>
-                      <TextInput
-                        style={[styles.setInput, isCompleted && styles.completedInput]}
-                        value={currentWeight.toString()}
-                        onChangeText={(value) => updateWeight(exerciseId, setNumber, value)}
-                        keyboardType="decimal-pad"
-                        placeholder="0"
-                        maxLength={6}
-                        editable={!isCompleted}
-                        onFocus={() => {
-                          setTimeout(() => {
-                            const setKey = `${exerciseId}-${setNumber}`;
-                            const y = positionsRef.current[setKey] ?? 0;
-                            const scrollOffset = y - 20;
-                            scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                          }, 100);
-                        }}
-                      />
-                    </View>
-                    
+
+                  {/* Weight Input Column */}
+                  <View style={styles.weightColumn}>
+                    <TextInput
+                      style={[styles.setInput, isCompleted && styles.completedInput]}
+                      value={currentWeight.toString()}
+                      onChangeText={(value) => updateWeight(exerciseId, setNumber, value)}
+                      keyboardType="decimal-pad"
+                      placeholder="0"
+                      maxLength={6}
+                      editable={!isCompleted}
+                      onFocus={() => {
+                        setTimeout(() => {
+                          const setKey = `${exerciseId}-${setNumber}`;
+                          const y = positionsRef.current[setKey] ?? 0;
+                          const scrollOffset = y - 20;
+                          scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                        }, 100);
+                      }}
+                    />
+                  </View>
+
+                  {/* Reps Input Column */}
+                  <View style={styles.repsColumn}>
+                    <TextInput
+                      style={[styles.setInput, isCompleted && styles.completedInput]}
+                      value={currentReps.toString()}
+                      onChangeText={(value) => updateRepCount(exerciseId, setNumber, value)}
+                      keyboardType="number-pad"
+                      placeholder="0"
+                      maxLength={3}
+                      editable={!isCompleted}
+                      onFocus={() => {
+                        setTimeout(() => {
+                          const setKey = `${exerciseId}-${setNumber}`;
+                          const y = positionsRef.current[setKey] ?? 0;
+                          const scrollOffset = y - 20;
+                          scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                        }, 100);
+                      }}
+                    />
+                  </View>
+
+                  {/* Check Button Column */}
+                  <View style={styles.checkColumn}>
                     <Pressable 
                       style={[styles.checkButton, isCompleted && styles.checkedButton]}
                       onPress={() => toggleSetCompleted(exerciseId, setNumber)}
                     >
                       <Ionicons 
                         name={isCompleted ? "checkmark" : "checkmark-outline"} 
-                        size={24} 
+                        size={18} 
                         color={isCompleted ? "#fff" : "#94a3b8"} 
                       />
                     </Pressable>
@@ -758,68 +736,125 @@ const styles = StyleSheet.create({
   disabledMenuItem: {
     color: "#6b7280",
   },
+  setsHeader: {
+    flexDirection: "row",
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: "#374151",
+    marginBottom: 10,
+    backgroundColor: "#1f2937",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  headerText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#9ca3af",
+    textAlign: "center",
+  },
+  headerSetColumn: {
+    width: 50,
+    alignItems: "center",
+  },
+  headerPreviousColumn: {
+    width: 100,
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  headerWeightColumn: {
+    width: 85,
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  headerRepsColumn: {
+    width: 70,
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  headerCheckColumn: {
+    width: 50,
+    alignItems: "center",
+  },
   setRow: {
-    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: "#1f2937",
-    marginVertical: 4,
-    borderRadius: 8,
+    marginVertical: 3,
+    borderRadius: 6,
+    minHeight: 55,
   },
   completedSetRow: {
     backgroundColor: "#064e3b",
   },
-  setInfo: {
-    marginBottom: 12,
+  setNumberColumn: {
+    width: 50,
+    alignItems: "center",
   },
-  setLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#cbd5e1",
-    marginBottom: 4,
+  setNumberText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#e5e7eb",
   },
-  previousData: {
-    fontSize: 14,
+  previousColumn: {
+    width: 100,
+    alignItems: "center",
+    paddingHorizontal: 6,
+  },
+  previousDataText: {
+    fontSize: 13,
     color: "#94a3b8",
-    fontStyle: "italic",
+    fontWeight: "500",
+    textAlign: "center",
   },
-  setInputs: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 16,
+  noPreviousData: {
+    fontSize: 13,
+    color: "#6b7280",
+    fontWeight: "500",
+    textAlign: "center",
   },
-  inputColumn: {
-    flex: 1,
+  weightColumn: {
+    width: 85,
+    paddingHorizontal: 6,
   },
-  inputLabel: {
-    fontSize: 12,
-    color: "#94a3b8",
-    fontWeight: "600",
-    marginBottom: 4,
+  repsColumn: {
+    width: 70,
+    paddingHorizontal: 6,
+  },
+  checkColumn: {
+    width: 50,
+    alignItems: "center",
+  },
+  completedText: {
+    color: "#d1fae5",
   },
   setInput: {
     backgroundColor: "#1f2937",
     borderWidth: 1,
     borderColor: "#374151",
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 9,
     color: "#e5e7eb",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     textAlign: "center",
-    minHeight: 40,
+    minHeight: 35,
+    width: "100%",
   },
   completedInput: {
     backgroundColor: "#065f46",
-    borderColor: "#047857",
     color: "#d1fae5",
   },
   checkButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#374151",
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: "#6b7280",
     justifyContent: "center",
     alignItems: "center",
@@ -831,7 +866,6 @@ const styles = StyleSheet.create({
   },
   checkedButton: {
     backgroundColor: "#059669",
-    borderColor: "#10b981",
     shadowColor: "#10b981",
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -844,43 +878,43 @@ const styles = StyleSheet.create({
   },
   finishButton: {
     backgroundColor: "#059669",
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: "center",
     shadowColor: "#059669",
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-    borderWidth: 2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    borderWidth: 1,
     borderColor: "#10b981",
   },
   finishButtonText: {
     color: "#fff",
-    fontSize: 19,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   cancelButton: {
     backgroundColor: "#dc2626",
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: "center",
     shadowColor: "#dc2626",
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-    borderWidth: 2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    borderWidth: 1,
     borderColor: "#ef4444",
   },
   cancelButtonText: {
     color: "#fff",
-    fontSize: 19,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   errorText: {
     color: "#94a3b8",
