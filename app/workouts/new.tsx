@@ -80,7 +80,7 @@ export default function NewWorkout() {
       <ScrollView
         ref={scrollRef}
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 32 }]}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
       >
@@ -113,9 +113,21 @@ export default function NewWorkout() {
                 onFocus={() => {
                   setTimeout(() => {
                     const y = positionsRef.current[ex.id] ?? 0;
-                    const scrollOffset = y - 20; // Minimal space above the input
-                    scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                  }, 100);
+                    const screenHeight = 600; // Approximate screen height
+                    const keyboardHeight = 300; // Approximate keyboard height
+                    const visibleArea = screenHeight - keyboardHeight;
+                    const isLastExercise = exercises.indexOf(ex) === exercises.length - 1;
+                    
+                    if (isLastExercise) {
+                      // For last exercise, position it higher up so you can see what you're typing
+                      const scrollOffset = y - 100; // Move much higher up
+                      scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                    } else {
+                      // For other exercises, position in upper part but leave room to see exercises below
+                      const scrollOffset = y - (visibleArea / 4);
+                      scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                    }
+                  }, 300);
                 }}
               />
               <View style={styles.setsAndRemove}>
@@ -129,9 +141,21 @@ export default function NewWorkout() {
                   onFocus={() => {
                     setTimeout(() => {
                       const y = positionsRef.current[ex.id] ?? 0;
-                      const scrollOffset = y - 20; // Minimal space above the input
-                      scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                    }, 100);
+                      const screenHeight = 600; // Approximate screen height
+                      const keyboardHeight = 300; // Approximate keyboard height
+                      const visibleArea = screenHeight - keyboardHeight;
+                      const isLastExercise = exercises.indexOf(ex) === exercises.length - 1;
+                      
+                      if (isLastExercise) {
+                        // For last exercise, position it higher up so you can see what you're typing
+                        const scrollOffset = y - 100; // Move much higher up
+                        scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                      } else {
+                        // For other exercises, position in upper part but leave room to see exercises below
+                        const scrollOffset = y - (visibleArea / 4);
+                        scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
+                      }
+                    }, 300);
                   }}
                 />
                 <Pressable onPress={() => removeExercise(ex.id)} style={styles.removeButton}>
@@ -155,7 +179,10 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#0f172a",
   },
-  content: { paddingBottom: 32 },
+  content: { 
+    paddingBottom: 32,
+    flexGrow: 1,
+  },
   label: {
     fontSize: 14,
     fontWeight: "700",
@@ -174,20 +201,17 @@ const styles = StyleSheet.create({
   },
   addExerciseButton: {
     marginTop: 12,
-    backgroundColor: "#6366f1",
-    paddingVertical: 12,
+    backgroundColor: "#4b5563",
+    paddingVertical: 10,
     alignItems: "center",
-    borderRadius: 12,
-    shadowColor: "#6366f1",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#6b7280",
   },
   addExerciseButtonText: {
-    color: "#fff",
+    color: "#e5e7eb",
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   exerciseRow: {
     marginTop: 12,
@@ -223,21 +247,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   saveButton: {
-    marginTop: 20,
-    backgroundColor: "#10b981",
-    paddingVertical: 14,
+    marginTop: 24,
+    marginBottom: 20,
+    backgroundColor: "#374151",
+    paddingVertical: 12,
     alignItems: "center",
-    borderRadius: 12,
-    shadowColor: "#10b981",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#4b5563",
   },
   saveButtonText: {
-    color: "#fff",
+    color: "#e5e7eb",
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "600",
   },
 });
 

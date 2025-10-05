@@ -52,7 +52,11 @@ export default function HistoryScreen() {
     
     completedWorkouts.forEach((workout) => {
       const date = new Date(workout.completedAt);
-      const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      // Use local timezone instead of UTC
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
       
       markedDates[dateString] = {
         marked: true,
@@ -177,9 +181,9 @@ export default function HistoryScreen() {
              />
             
             <View style={styles.calendarFooter}>
-              <Text style={styles.calendarFooterText}>
-                Green dots indicate days you worked out
-              </Text>
+                <Text style={styles.calendarFooterText}>
+                  Green boxes indicate days you worked out
+                </Text>
             </View>
           </View>
         </View>

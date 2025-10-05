@@ -13,7 +13,8 @@ export default function StartWorkout() {
         options={{ 
           headerShown: true,
           headerBackVisible: false,
-          headerLeft: () => null
+          headerLeft: () => null,
+          gestureEnabled: false
         }} 
       />
       <StartWorkoutContent />
@@ -858,19 +859,9 @@ const styles = StyleSheet.create({
     borderColor: "#6b7280",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
   },
   checkedButton: {
     backgroundColor: "#059669",
-    shadowColor: "#10b981",
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
   },
   actionButtons: {
     marginTop: 20,
@@ -882,11 +873,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: "center",
-    shadowColor: "#059669",
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
     borderWidth: 1,
     borderColor: "#10b981",
   },
@@ -902,11 +888,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: "center",
-    shadowColor: "#dc2626",
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
     borderWidth: 1,
     borderColor: "#ef4444",
   },

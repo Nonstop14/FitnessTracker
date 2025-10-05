@@ -39,25 +39,27 @@ export default function SimpleCalendar({ markedDates, onDayPress }: SimpleCalend
       const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const isMarked = markedDates[dateString];
       const isToday = day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+      const isTodayAndMarked = isToday && isMarked;
       
       days.push(
         <Pressable
           key={day}
           style={[
             styles.dayCell,
-            isToday && styles.todayCell,
-            isMarked && styles.markedCell
+            isTodayAndMarked && styles.todayMarkedCell,
+            isToday && !isMarked && styles.todayCell,
+            isMarked && !isToday && styles.markedCell
           ]}
           onPress={() => onDayPress?.(dateString)}
         >
           <Text style={[
             styles.dayText,
-            isToday && styles.todayText,
-            isMarked && styles.markedText
+            isTodayAndMarked && styles.todayMarkedText,
+            isToday && !isMarked && styles.todayText,
+            isMarked && !isToday && styles.markedText
           ]}>
             {day}
           </Text>
-          {isMarked && <View style={styles.dot} />}
         </Pressable>
       );
     }
@@ -139,6 +141,16 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700',
   },
+  todayMarkedCell: {
+    backgroundColor: '#6366f1',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#10b981',
+  },
+  todayMarkedText: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
   markedCell: {
     backgroundColor: '#10b981',
     borderRadius: 8,
@@ -151,9 +163,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 2,
     left: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#ffffff',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fbbf24',
   },
 });

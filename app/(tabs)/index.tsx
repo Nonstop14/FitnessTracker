@@ -43,15 +43,7 @@ export default function HomeScreen() {
       style={styles.container}
       onPress={() => setShowMenu(null)}
     >
-      <Text style={styles.title}>Create</Text>
-      <Link href="/workouts/new" asChild>
-        <Pressable style={styles.addButton}>
-          <Ionicons name="add-circle" size={20} color="#fff" style={styles.addIcon} />
-          <Text style={styles.addButtonText}>Add Workout</Text>
-        </Pressable>
-      </Link>
-
-      <Text style={styles.sectionTitle}>My workouts</Text>
+      <Text style={styles.title}>My workouts:</Text>
       <FlatList
         key="grid-2"
         data={workouts}
@@ -172,6 +164,13 @@ export default function HomeScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Floating Add Workout Button */}
+      <Link href="/workouts/new" asChild>
+        <Pressable style={styles.floatingAddButton}>
+          <Ionicons name="add" size={24} color="#fff" />
+        </Pressable>
+      </Link>
     </Pressable>
   );
 }
@@ -188,32 +187,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: "#e2e8f0",
   },
-  addButton: {
+  floatingAddButton: {
+    position: "absolute",
+    bottom: 25,
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#6366f1",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    alignSelf: "flex-start",
-    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#6366f1",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  addIcon: { marginRight: 8 },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  sectionTitle: {
-    marginTop: 24,
-    marginBottom: 8,
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#cbd5e1",
+    borderWidth: 1,
+    borderColor: "#4f46e5",
   },
   gridContent: {
     paddingTop: 8,
@@ -230,11 +215,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#1f2937",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
     position: "relative",
   },
   cardHeader: {
@@ -367,11 +347,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: "#10b981",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#059669",
   },
   startButtonText: {
     color: "#fff",
