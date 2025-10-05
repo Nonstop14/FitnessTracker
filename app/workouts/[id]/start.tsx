@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Keyboard, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import AddExerciseModal from "../../../components/AddExerciseModal";
 import WorkoutTimer from "../../../components/WorkoutTimer";
 import { useWorkouts } from "../../../context/WorkoutsContext";
@@ -397,14 +397,14 @@ function StartWorkoutContent() {
 
   return (
     <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.select({ ios: "padding", android: "height" })}
-      keyboardVerticalOffset={Platform.select({ ios: 0, android: 20 })}
+      style={{ flex: 1, backgroundColor: "#0f172a" }} 
+      behavior="padding"
+      keyboardVerticalOffset={-200}
     >
       <ScrollView 
         ref={scrollRef}
         style={styles.container} 
-        contentContainerStyle={[styles.content, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 32 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 200 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
       >
@@ -568,11 +568,9 @@ function StartWorkoutContent() {
                       editable={!isCompleted}
                       onFocus={() => {
                         setTimeout(() => {
-                          const setKey = `${exerciseId}-${setNumber}`;
-                          const y = positionsRef.current[setKey] ?? 0;
-                          const scrollOffset = y - 20;
-                          scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                        }, 100);
+                          // Scroll to show the input with extra space for buttons
+                          scrollRef.current?.scrollTo({ y: 1000, animated: true });
+                        }, 300);
                       }}
                     />
                   </View>
@@ -589,11 +587,9 @@ function StartWorkoutContent() {
                       editable={!isCompleted}
                       onFocus={() => {
                         setTimeout(() => {
-                          const setKey = `${exerciseId}-${setNumber}`;
-                          const y = positionsRef.current[setKey] ?? 0;
-                          const scrollOffset = y - 20;
-                          scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                        }, 100);
+                          // Scroll to show the input with extra space for buttons
+                          scrollRef.current?.scrollTo({ y: 1000, animated: true });
+                        }, 300);
                       }}
                     />
                   </View>

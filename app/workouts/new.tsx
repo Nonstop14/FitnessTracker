@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Keyboard, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useWorkouts } from "../../context/WorkoutsContext";
 
 export default function NewWorkout() {
@@ -73,14 +73,14 @@ export default function NewWorkout() {
 
   return (
     <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.select({ ios: "padding", android: "height" })}
-      keyboardVerticalOffset={Platform.select({ ios: 0, android: 20 })}
+      style={{ flex: 1, backgroundColor: "#0f172a" }} 
+      behavior="padding"
+      keyboardVerticalOffset={-200}
     >
       <ScrollView
         ref={scrollRef}
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: 200 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
       >
@@ -112,21 +112,8 @@ export default function NewWorkout() {
                 onChangeText={(t) => updateExerciseName(ex.id, t)}
                 onFocus={() => {
                   setTimeout(() => {
-                    const y = positionsRef.current[ex.id] ?? 0;
-                    const screenHeight = 600; // Approximate screen height
-                    const keyboardHeight = 300; // Approximate keyboard height
-                    const visibleArea = screenHeight - keyboardHeight;
-                    const isLastExercise = exercises.indexOf(ex) === exercises.length - 1;
-                    
-                    if (isLastExercise) {
-                      // For last exercise, position it higher up so you can see what you're typing
-                      const scrollOffset = y - 100; // Move much higher up
-                      scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                    } else {
-                      // For other exercises, position in upper part but leave room to see exercises below
-                      const scrollOffset = y - (visibleArea / 4);
-                      scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                    }
+                    // Scroll to show the input with extra space for save button
+                    scrollRef.current?.scrollTo({ y: 1000, animated: true });
                   }, 300);
                 }}
               />
@@ -140,21 +127,8 @@ export default function NewWorkout() {
                   maxLength={2}
                   onFocus={() => {
                     setTimeout(() => {
-                      const y = positionsRef.current[ex.id] ?? 0;
-                      const screenHeight = 600; // Approximate screen height
-                      const keyboardHeight = 300; // Approximate keyboard height
-                      const visibleArea = screenHeight - keyboardHeight;
-                      const isLastExercise = exercises.indexOf(ex) === exercises.length - 1;
-                      
-                      if (isLastExercise) {
-                        // For last exercise, position it higher up so you can see what you're typing
-                        const scrollOffset = y - 100; // Move much higher up
-                        scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                      } else {
-                        // For other exercises, position in upper part but leave room to see exercises below
-                        const scrollOffset = y - (visibleArea / 4);
-                        scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                      }
+                      // Scroll to show the input with extra space for save button
+                      scrollRef.current?.scrollTo({ y: 1000, animated: true });
                     }, 300);
                   }}
                 />
