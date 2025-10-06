@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useWorkouts } from "../../../context/WorkoutsContext";
 
 export default function EditWorkout() {
@@ -11,9 +12,21 @@ export default function EditWorkout() {
 
   const [name, setName] = useState("");
   const [exercises, setExercises] = useState<Array<{ id: string; exerciseName: string; sets: string }>>([]);
-  const scrollRef = useRef<ScrollView | null>(null);
-  const positionsRef = useRef<Record<string, number>>({});
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseSets, setNewExerciseSets] = useState("");
+  
+  const scrollViewRef = useRef<any>(null);
+
+  useEffect(() => {
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      // Prevent auto-reset by doing nothing - let the scroll position stay where it is
+    });
+
+    return () => {
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (workout) {
@@ -22,19 +35,6 @@ export default function EditWorkout() {
     }
   }, [workout]);
 
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      keyboardDidShowListener?.remove();
-      keyboardDidHideListener?.remove();
-    };
-  }, []);
 
   function updateExerciseName(exId: string, value: string) {
     setExercises((prev) => prev.map((e) => (e.id === exId ? { ...e, exerciseName: value } : e)));
@@ -49,11 +49,29 @@ export default function EditWorkout() {
     setExercises((prev) => prev.filter((e) => e.id !== exId));
   }
 
-  function addExercise() {
+  function handleAddExercise() {
+    const trimmedName = newExerciseName.trim();
+    const setsNumber = Number(newExerciseSets);
+
+    if (!trimmedName) {
+      Alert.alert('Missing Exercise Name', 'Please enter an exercise name.');
+      return;
+    }
+
+    if (!setsNumber || setsNumber <= 0) {
+      Alert.alert('Invalid Sets', 'Please enter a valid number of sets.');
+      return;
+    }
+
     setExercises((prev) => [
       ...prev,
-      { id: Math.random().toString(36).slice(2), exerciseName: "", sets: "" },
+      { id: Math.random().toString(36).slice(2), exerciseName: trimmedName, sets: setsNumber.toString() },
     ]);
+
+    // Reset form and close modal
+    setNewExerciseName("");
+    setNewExerciseSets("");
+    setShowAddExerciseModal(false);
   }
 
   function handleSave() {
@@ -81,28 +99,31 @@ export default function EditWorkout() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.select({ ios: "padding", android: "height" })}
-      keyboardVerticalOffset={Platform.select({ ios: 0, android: 20 })}
-    >
-      <ScrollView
-        ref={scrollRef}
-        style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 32 }]}
+    <View style={styles.container}>
+      <KeyboardAwareScrollView
+        ref={scrollViewRef}
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
+        extraScrollHeight={60}
+        keyboardOpeningTime={250}
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraHeight={80}
+        scrollEventThrottle={16}
       >
         <Text style={styles.label}>Workout name</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} />
+        <TextInput 
+          style={styles.input} 
+          value={name} 
+          onChangeText={setName}
+        />
 
       {exercises.map((ex, idx) => (
         <View
           key={ex.id}
           style={styles.exerciseRow}
-          onLayout={(e) => {
-            positionsRef.current[ex.id] = e.nativeEvent.layout.y;
-          }}
         >
           <Text style={styles.exerciseIndex}>{idx + 1}.</Text>
           <View style={styles.exerciseInputs}>
@@ -111,13 +132,6 @@ export default function EditWorkout() {
               placeholder="Exercise name"
               value={ex.exerciseName}
               onChangeText={(t) => updateExerciseName(ex.id, t)}
-              onFocus={() => {
-                setTimeout(() => {
-                  const y = positionsRef.current[ex.id] ?? 0;
-                  const scrollOffset = y - 20; // Minimal space above the input
-                  scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                }, 100);
-              }}
             />
             <View style={styles.setsAndRemove}>
               <TextInput
@@ -127,13 +141,6 @@ export default function EditWorkout() {
                 value={ex.sets}
                 onChangeText={(t) => updateExerciseSets(ex.id, t)}
                 maxLength={2}
-                onFocus={() => {
-                  setTimeout(() => {
-                    const y = positionsRef.current[ex.id] ?? 0;
-                    const scrollOffset = y - 20; // Minimal space above the input
-                    scrollRef.current?.scrollTo({ y: Math.max(scrollOffset, 0), animated: true });
-                  }, 100);
-                }}
               />
               <Pressable onPress={() => removeExercise(ex.id)} style={styles.removeButton}>
                 <Text style={styles.removeText}>✕</Text>
@@ -143,20 +150,83 @@ export default function EditWorkout() {
         </View>
       ))}
 
-        <Pressable style={styles.addExerciseButton} onPress={addExercise}>
-          <Text style={styles.addExerciseButtonText}>Add Exercise</Text>
+        <Pressable 
+          style={styles.addExerciseButton} 
+          onPress={() => setShowAddExerciseModal(true)}
+        >
+          <Text style={styles.addExerciseButtonText}>+ Add Exercise</Text>
         </Pressable>
 
         <Pressable style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+
+      {/* Add Exercise Modal */}
+      <Modal
+        visible={showAddExerciseModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowAddExerciseModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.addExerciseModal}>
+            <Text style={styles.modalTitle}>Add Exercise</Text>
+            
+            <View style={styles.modalInputContainer}>
+              <Text style={styles.modalLabel}>Exercise Name</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g., Bench Press"
+                value={newExerciseName}
+                onChangeText={setNewExerciseName}
+                placeholderTextColor="#6b7280"
+                autoFocus={true}
+              />
+            </View>
+
+            <View style={styles.modalInputContainer}>
+              <Text style={styles.modalLabel}>Number of Sets</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g., 3"
+                value={newExerciseSets}
+                onChangeText={(text) => {
+                  const sanitized = text.replace(/[^0-9]/g, '');
+                  setNewExerciseSets(sanitized);
+                }}
+                keyboardType="number-pad"
+                maxLength={2}
+                placeholderTextColor="#6b7280"
+              />
+            </View>
+
+            <View style={styles.modalButtonContainer}>
+              <Pressable 
+                style={styles.modalCancelButton} 
+                onPress={() => {
+                  setNewExerciseName("");
+                  setNewExerciseSets("");
+                  setShowAddExerciseModal(false);
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </Pressable>
+              
+              <Pressable style={styles.modalAddButton} onPress={handleAddExercise}>
+                <Text style={styles.modalAddButtonText}>Add Exercise</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#0f172a" },
+  container: { flex: 1, backgroundColor: "#0f172a" },
+  scrollContainer: { flex: 1, padding: 16 },
   content: { paddingBottom: 32 },
   label: { fontSize: 14, fontWeight: "700", marginTop: 12, marginBottom: 6, color: "#cbd5e1" },
   input: {
@@ -187,12 +257,100 @@ const styles = StyleSheet.create({
   muted: { color: "#94a3b8" },
   addExerciseButton: {
     marginTop: 12,
-    backgroundColor: "#6366f1",
+    marginBottom: 16,
+    backgroundColor: "#3b82f6",
     paddingVertical: 12,
     alignItems: "center",
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#2563eb",
   },
-  addExerciseButtonText: { color: "#fff", fontWeight: "700" },
+  addExerciseButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  addExerciseModal: {
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#334155',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    marginBottom: 100, // Move modal up to avoid keyboard
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#f3f4f6',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalInputContainer: {
+    marginBottom: 20,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#cbd5e1',
+    marginBottom: 8,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#374151',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#111827',
+    color: '#f3f4f6',
+    fontSize: 16,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: '#374151',
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#4b5563',
+  },
+  modalCancelButtonText: {
+    color: '#e5e7eb',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalAddButton: {
+    flex: 1,
+    backgroundColor: '#10b981',
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#059669',
+  },
+  modalAddButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
 

@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Keyboard, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import AddExerciseModal from "../../../components/AddExerciseModal";
+import { Alert, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import WorkoutTimer from "../../../components/WorkoutTimer";
 import { useWorkouts } from "../../../context/WorkoutsContext";
 
@@ -40,9 +40,18 @@ function StartWorkoutContent() {
   const [newExerciseSets, setNewExerciseSets] = useState("");
   const [customExercises, setCustomExercises] = useState<Record<string, { name: string; sets: number }>>({});
   const [isFinishingWorkout, setIsFinishingWorkout] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const scrollRef = useRef<ScrollView | null>(null);
   const positionsRef = useRef<Record<string, number>>({});
+  const scrollViewRef = useRef<any>(null);
+
+  useEffect(() => {
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      // Prevent auto-reset by doing nothing - let the scroll position stay where it is
+    });
+
+    return () => {
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   // Timer effect
   useEffect(() => {
@@ -101,20 +110,6 @@ function StartWorkoutContent() {
 
 
 
-  // Keyboard event listeners
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      keyboardDidShowListener?.remove();
-      keyboardDidHideListener?.remove();
-    };
-  }, []);
 
   if (!workout) {
     return (
@@ -396,17 +391,19 @@ function StartWorkoutContent() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1, backgroundColor: "#0f172a" }} 
-      behavior="padding"
-      keyboardVerticalOffset={-200}
-    >
-      <ScrollView 
-        ref={scrollRef}
+    <View style={{ flex: 1, backgroundColor: "#0f172a" }}>
+      <KeyboardAwareScrollView 
+        ref={scrollViewRef}
         style={styles.container} 
-        contentContainerStyle={[styles.content, { paddingBottom: 200 }]}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
+        extraScrollHeight={60}
+        keyboardOpeningTime={250}
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraHeight={80}
+        scrollEventThrottle={16}
       >
       {/* Timer Section */}
       <WorkoutTimer 
@@ -566,12 +563,6 @@ function StartWorkoutContent() {
                       placeholder="0"
                       maxLength={6}
                       editable={!isCompleted}
-                      onFocus={() => {
-                        setTimeout(() => {
-                          // Scroll to show the input with extra space for buttons
-                          scrollRef.current?.scrollTo({ y: 1000, animated: true });
-                        }, 300);
-                      }}
                     />
                   </View>
 
@@ -585,12 +576,6 @@ function StartWorkoutContent() {
                       placeholder="0"
                       maxLength={3}
                       editable={!isCompleted}
-                      onFocus={() => {
-                        setTimeout(() => {
-                          // Scroll to show the input with extra space for buttons
-                          scrollRef.current?.scrollTo({ y: 1000, animated: true });
-                        }, 300);
-                      }}
                     />
                   </View>
 
@@ -615,19 +600,63 @@ function StartWorkoutContent() {
       })}
 
       {/* Add Exercise Modal */}
-      <AddExerciseModal
+      <Modal
         visible={showAddExerciseModal}
-        exerciseName={newExerciseName}
-        exerciseSets={newExerciseSets}
-        onExerciseNameChange={setNewExerciseName}
-        onExerciseSetsChange={setNewExerciseSets}
-        onClose={() => {
-          setNewExerciseName("");
-          setNewExerciseSets("");
-          setShowAddExerciseModal(false);
-        }}
-        onAdd={handleAddExercise}
-      />
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowAddExerciseModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.addExerciseModal}>
+            <Text style={styles.modalTitle}>Add Exercise</Text>
+            
+            <View style={styles.modalInputContainer}>
+              <Text style={styles.modalLabel}>Exercise Name</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g., Bench Press"
+                value={newExerciseName}
+                onChangeText={setNewExerciseName}
+                placeholderTextColor="#6b7280"
+                autoFocus={true}
+              />
+            </View>
+
+            <View style={styles.modalInputContainer}>
+              <Text style={styles.modalLabel}>Number of Sets</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g., 3"
+                value={newExerciseSets}
+                onChangeText={(text) => {
+                  const sanitized = text.replace(/[^0-9]/g, '');
+                  setNewExerciseSets(sanitized);
+                }}
+                keyboardType="number-pad"
+                maxLength={2}
+                placeholderTextColor="#6b7280"
+              />
+            </View>
+
+            <View style={styles.modalButtonContainer}>
+              <Pressable 
+                style={styles.modalCancelButton} 
+                onPress={() => {
+                  setNewExerciseName("");
+                  setNewExerciseSets("");
+                  setShowAddExerciseModal(false);
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </Pressable>
+              
+              <Pressable style={styles.modalAddButton} onPress={handleAddExercise}>
+                <Text style={styles.modalAddButtonText}>Add Exercise</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
@@ -639,8 +668,8 @@ function StartWorkoutContent() {
           <Text style={styles.cancelButtonText}>Cancel Workout</Text>
         </Pressable>
       </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }
 
@@ -898,5 +927,79 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginTop: 50,
+  },
+  addExerciseModal: {
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#334155',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    marginBottom: 100, // Move modal up to avoid keyboard
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#f3f4f6',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalInputContainer: {
+    marginBottom: 20,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#cbd5e1',
+    marginBottom: 8,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#374151',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#111827',
+    color: '#f3f4f6',
+    fontSize: 16,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: '#374151',
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#4b5563',
+  },
+  modalCancelButtonText: {
+    color: '#e5e7eb',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalAddButton: {
+    flex: 1,
+    backgroundColor: '#10b981',
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#059669',
+  },
+  modalAddButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
