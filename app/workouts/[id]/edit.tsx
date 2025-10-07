@@ -15,6 +15,7 @@ export default function EditWorkout() {
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [newExerciseName, setNewExerciseName] = useState("");
   const [newExerciseSets, setNewExerciseSets] = useState("");
+  const [restTime, setRestTime] = useState("90");
   
   const scrollViewRef = useRef<any>(null);
 
@@ -32,6 +33,7 @@ export default function EditWorkout() {
     if (workout) {
       setName(workout.name);
       setExercises(workout.exercises.map((e) => ({ id: e.id, exerciseName: e.exerciseName, sets: String(e.sets) })));
+      setRestTime(String(workout.restTime || 90));
     }
   }, [workout]);
 
@@ -87,6 +89,7 @@ export default function EditWorkout() {
     updateWorkout(id as string, {
       name: name.trim(),
       exercises: exercises.map((e) => ({ id: e.id, exerciseName: e.exerciseName.trim(), sets: Number(e.sets) })),
+      restTime: Number(restTime) || 90,
     });
     Alert.alert("Saved", "Workout updated.");
     router.back();
@@ -118,6 +121,19 @@ export default function EditWorkout() {
           style={styles.input} 
           value={name} 
           onChangeText={setName}
+        />
+        
+        <Text style={styles.label}>Rest time between sets (seconds)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., 90"
+          value={restTime}
+          onChangeText={(text) => {
+            const sanitized = text.replace(/[^0-9]/g, "");
+            setRestTime(sanitized);
+          }}
+          keyboardType="number-pad"
+          maxLength={3}
         />
 
       {exercises.map((ex, idx) => (

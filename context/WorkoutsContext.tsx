@@ -17,6 +17,7 @@ export type WorkoutPlan = {
   name: string;
   createdAt: number;
   exercises: WorkoutExercise[];
+  restTime?: number; // in seconds, default 90
 };
 
 export type CompletedSet = {

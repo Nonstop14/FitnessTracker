@@ -40,6 +40,13 @@ function StartWorkoutContent() {
   const [newExerciseSets, setNewExerciseSets] = useState("");
   const [customExercises, setCustomExercises] = useState<Record<string, { name: string; sets: number }>>({});
   const [isFinishingWorkout, setIsFinishingWorkout] = useState(false);
+  const [setRestTimers, setSetRestTimers] = useState<Record<string, {
+    isActive: boolean;
+    timeRemaining: number;
+    totalTime: number;
+  }>>({});
+  const [editingTimer, setEditingTimer] = useState<string | null>(null);
+  const [tempTimerDuration, setTempTimerDuration] = useState("");
   const positionsRef = useRef<Record<string, number>>({});
   const scrollViewRef = useRef<any>(null);
 
@@ -63,6 +70,31 @@ function StartWorkoutContent() {
     }
     return () => clearInterval(interval);
   }, [isRunning]);
+
+  // Rest timer effect for all active set timers
+  useEffect(() => {
+    const activeTimers = Object.entries(setRestTimers).filter(([_, timer]) => timer.isActive && timer.timeRemaining > 0);
+    
+    if (activeTimers.length > 0) {
+      const interval = setInterval(() => {
+        setSetRestTimers(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(setKey => {
+            if (updated[setKey].isActive && updated[setKey].timeRemaining > 0) {
+              if (updated[setKey].timeRemaining <= 1) {
+                updated[setKey] = { ...updated[setKey], isActive: false, timeRemaining: 0 };
+              } else {
+                updated[setKey] = { ...updated[setKey], timeRemaining: updated[setKey].timeRemaining - 1 };
+              }
+            }
+          });
+          return updated;
+        });
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [setRestTimers]);
 
   // Get previous workout data for this exercise
   const getPreviousWorkoutData = (exerciseName: string, setNumber: number) => {
@@ -143,10 +175,94 @@ function StartWorkoutContent() {
 
   const toggleSetCompleted = (exerciseId: string, setNumber: number) => {
     const setKey = `${exerciseId}-${setNumber}`;
+    const isCurrentlyCompleted = completedSets[setKey] || false;
+    
     setCompletedSets(prev => ({
       ...prev,
-      [setKey]: !prev[setKey]
+      [setKey]: !isCurrentlyCompleted
     }));
+
+    // Start rest timer when a set is completed (not when unchecked)
+    if (!isCurrentlyCompleted) {
+      // Clear all previous set timers for this exercise when starting a new set
+      setSetRestTimers(prev => {
+        const updated = { ...prev };
+        // Remove timers for all previous sets in this exercise
+        Object.keys(updated).forEach(key => {
+          if (key.startsWith(`${exerciseId}-`) && key !== setKey) {
+            delete updated[key];
+          }
+        });
+        return updated;
+      });
+
+      const restDuration = workout?.restTime || 90;
+      setSetRestTimers(prev => ({
+        ...prev,
+        [setKey]: {
+          isActive: true,
+          timeRemaining: restDuration,
+          totalTime: restDuration
+        }
+      }));
+    } else {
+      // Clear timer when set is unchecked
+      setSetRestTimers(prev => {
+        const updated = { ...prev };
+        delete updated[setKey];
+        return updated;
+      });
+    }
+  };
+
+  const toggleSetRestTimer = (setKey: string) => {
+    setSetRestTimers(prev => {
+      const current = prev[setKey];
+      if (current) {
+        return {
+          ...prev,
+          [setKey]: { ...current, isActive: !current.isActive }
+        };
+      }
+      return prev;
+    });
+  };
+
+  const skipSetRestTimer = (setKey: string) => {
+    setSetRestTimers(prev => {
+      const updated = { ...prev };
+      delete updated[setKey];
+      return updated;
+    });
+  };
+
+  const startEditTimer = (setKey: string) => {
+    const currentTimer = setRestTimers[setKey];
+    if (currentTimer) {
+      setEditingTimer(setKey);
+      setTempTimerDuration(Math.floor(currentTimer.timeRemaining / 60).toString());
+    }
+  };
+
+  const saveTimerEdit = (setKey: string) => {
+    const newDuration = parseInt(tempTimerDuration) * 60; // Convert minutes to seconds
+    if (newDuration > 0) {
+      setSetRestTimers(prev => ({
+        ...prev,
+        [setKey]: {
+          ...prev[setKey],
+          timeRemaining: newDuration,
+          totalTime: newDuration
+        }
+      }));
+    }
+    setEditingTimer(null);
+    setTempTimerDuration("");
+  };
+
+  const cancelTimerEdit = () => {
+    setEditingTimer(null);
+    setTempTimerDuration("");
   };
 
   const addSet = (exerciseId: string) => {
@@ -412,6 +528,7 @@ function StartWorkoutContent() {
         onToggleTimer={toggleTimer}
       />
 
+
       {/* Workout Title and Add Exercise Button */}
       <View style={styles.workoutHeader}>
         <Text style={styles.workoutTitle}>{workout.name}</Text>
@@ -525,73 +642,150 @@ function StartWorkoutContent() {
               const previousData = getPreviousWorkoutData(exerciseName, setNumber);
               
               return (
-                <View 
-                  key={`${exerciseId}-${setNumber}`} 
-                  style={[styles.setRow, isCompleted && styles.completedSetRow]}
-                  onLayout={(e) => {
-                    const setKey = `${exerciseId}-${setNumber}`;
-                    positionsRef.current[setKey] = e.nativeEvent.layout.y;
-                  }}
-                >
-                  {/* Set Number Column */}
-                  <View style={styles.setNumberColumn}>
-                    <Text style={[styles.setNumberText, isCompleted && styles.completedText]}>
-                      {setNumber}
-                    </Text>
-                  </View>
-
-                  {/* Previous Data Column */}
-                  <View style={styles.previousColumn}>
-                    {previousData ? (
-                      <Text style={[styles.previousDataText, isCompleted && styles.completedText]}>
-                        {previousData.weight}kg × {previousData.reps}
+                <View key={`${exerciseId}-${setNumber}`}>
+                  <View 
+                    style={[styles.setRow, isCompleted && styles.completedSetRow]}
+                    onLayout={(e) => {
+                      const setKey = `${exerciseId}-${setNumber}`;
+                      positionsRef.current[setKey] = e.nativeEvent.layout.y;
+                    }}
+                  >
+                    {/* Set Number Column */}
+                    <View style={styles.setNumberColumn}>
+                      <Text style={[styles.setNumberText, isCompleted && styles.completedText]}>
+                        {setNumber}
                       </Text>
-                    ) : (
-                      <Text style={[styles.noPreviousData, isCompleted && styles.completedText]}>
-                        -
-                      </Text>
-                    )}
-                  </View>
+                    </View>
 
-                  {/* Weight Input Column */}
-                  <View style={styles.weightColumn}>
-                    <TextInput
-                      style={[styles.setInput, isCompleted && styles.completedInput]}
-                      value={currentWeight.toString()}
-                      onChangeText={(value) => updateWeight(exerciseId, setNumber, value)}
-                      keyboardType="decimal-pad"
-                      placeholder="0"
-                      maxLength={6}
-                      editable={!isCompleted}
-                    />
-                  </View>
+                    {/* Previous Data Column */}
+                    <View style={styles.previousColumn}>
+                      {previousData ? (
+                        <Text style={[styles.previousDataText, isCompleted && styles.completedText]}>
+                          {previousData.weight}kg × {previousData.reps}
+                        </Text>
+                      ) : (
+                        <Text style={[styles.noPreviousData, isCompleted && styles.completedText]}>
+                          -
+                        </Text>
+                      )}
+                    </View>
 
-                  {/* Reps Input Column */}
-                  <View style={styles.repsColumn}>
-                    <TextInput
-                      style={[styles.setInput, isCompleted && styles.completedInput]}
-                      value={currentReps.toString()}
-                      onChangeText={(value) => updateRepCount(exerciseId, setNumber, value)}
-                      keyboardType="number-pad"
-                      placeholder="0"
-                      maxLength={3}
-                      editable={!isCompleted}
-                    />
-                  </View>
-
-                  {/* Check Button Column */}
-                  <View style={styles.checkColumn}>
-                    <Pressable 
-                      style={[styles.checkButton, isCompleted && styles.checkedButton]}
-                      onPress={() => toggleSetCompleted(exerciseId, setNumber)}
-                    >
-                      <Ionicons 
-                        name={isCompleted ? "checkmark" : "checkmark-outline"} 
-                        size={18} 
-                        color={isCompleted ? "#fff" : "#94a3b8"} 
+                    {/* Weight Input Column */}
+                    <View style={styles.weightColumn}>
+                      <TextInput
+                        style={[styles.setInput, isCompleted && styles.completedInput]}
+                        value={currentWeight.toString()}
+                        onChangeText={(value) => updateWeight(exerciseId, setNumber, value)}
+                        keyboardType="decimal-pad"
+                        placeholder="0"
+                        maxLength={6}
+                        editable={!isCompleted}
                       />
-                    </Pressable>
+                    </View>
+
+                    {/* Reps Input Column */}
+                    <View style={styles.repsColumn}>
+                      <TextInput
+                        style={[styles.setInput, isCompleted && styles.completedInput]}
+                        value={currentReps.toString()}
+                        onChangeText={(value) => updateRepCount(exerciseId, setNumber, value)}
+                        keyboardType="number-pad"
+                        placeholder="0"
+                        maxLength={3}
+                        editable={!isCompleted}
+                      />
+                    </View>
+
+                    {/* Check Button Column */}
+                    <View style={styles.checkColumn}>
+                      <Pressable 
+                        style={[styles.checkButton, isCompleted && styles.checkedButton]}
+                        onPress={() => toggleSetCompleted(exerciseId, setNumber)}
+                      >
+                        <Ionicons 
+                          name={isCompleted ? "checkmark" : "checkmark-outline"} 
+                          size={18} 
+                          color={isCompleted ? "#fff" : "#94a3b8"} 
+                        />
+                      </Pressable>
+                    </View>
                   </View>
+                  
+                  {/* Rest Timer Progress Bar - only show if set is completed and has active timer */}
+                  {isCompleted && setRestTimers[setKey] && (
+                    <View style={styles.restTimerProgressContainer}>
+                      <View style={styles.restTimerProgressBar}>
+                        <View 
+                          style={[
+                            styles.restTimerProgressFill, 
+                            { 
+                              width: `${((setRestTimers[setKey].totalTime - setRestTimers[setKey].timeRemaining) / setRestTimers[setKey].totalTime) * 100}%` 
+                            }
+                          ]} 
+                        />
+                      </View>
+                      <View style={styles.restTimerInfo}>
+                        {editingTimer === setKey ? (
+                          <View style={styles.timerEditContainer}>
+                            <TextInput
+                              style={styles.timerEditInput}
+                              value={tempTimerDuration}
+                              onChangeText={setTempTimerDuration}
+                              keyboardType="number-pad"
+                              placeholder="Minutes"
+                              maxLength={3}
+                              autoFocus={true}
+                            />
+                            <Text style={styles.timerEditLabel}>min</Text>
+                            <View style={styles.timerEditButtons}>
+                              <Pressable 
+                                style={styles.timerEditButton}
+                                onPress={() => saveTimerEdit(setKey)}
+                              >
+                                <Ionicons name="checkmark" size={14} color="#10b981" />
+                              </Pressable>
+                              <Pressable 
+                                style={styles.timerEditButton}
+                                onPress={cancelTimerEdit}
+                              >
+                                <Ionicons name="close" size={14} color="#ef4444" />
+                              </Pressable>
+                            </View>
+                          </View>
+                        ) : (
+                          <>
+                            <Text style={styles.restTimerText}>
+                              Rest: {Math.floor(setRestTimers[setKey].timeRemaining / 60)}:{(setRestTimers[setKey].timeRemaining % 60).toString().padStart(2, '0')}
+                            </Text>
+                            <View style={styles.restTimerControls}>
+                              <Pressable 
+                                style={styles.restTimerControlButton}
+                                onPress={() => toggleSetRestTimer(setKey)}
+                              >
+                                <Ionicons 
+                                  name={setRestTimers[setKey].isActive ? "pause" : "play"} 
+                                  size={14} 
+                                  color="#94a3b8" 
+                                />
+                              </Pressable>
+                              <Pressable 
+                                style={styles.restTimerControlButton}
+                                onPress={() => startEditTimer(setKey)}
+                              >
+                                <Ionicons name="create" size={14} color="#94a3b8" />
+                              </Pressable>
+                              <Pressable 
+                                style={styles.restTimerControlButton}
+                                onPress={() => skipSetRestTimer(setKey)}
+                              >
+                                <Ionicons name="close" size={14} color="#94a3b8" />
+                              </Pressable>
+                            </View>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                  )}
                 </View>
               );
             })}
@@ -1001,5 +1195,68 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  restTimerProgressContainer: {
+    marginTop: 8,
+    paddingHorizontal: 8,
+  },
+  restTimerProgressBar: {
+    height: 4,
+    backgroundColor: '#374151',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  restTimerProgressFill: {
+    height: '100%',
+    backgroundColor: '#10b981',
+    borderRadius: 2,
+  },
+  restTimerInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  restTimerText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  restTimerControls: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  restTimerControlButton: {
+    padding: 4,
+  },
+  timerEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timerEditInput: {
+    backgroundColor: '#1f2937',
+    borderWidth: 1,
+    borderColor: '#374151',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    color: '#e5e7eb',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    width: 50,
+  },
+  timerEditLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  timerEditButtons: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  timerEditButton: {
+    padding: 4,
   },
 });
