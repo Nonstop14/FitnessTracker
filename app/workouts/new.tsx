@@ -1,7 +1,8 @@
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import AddExerciseModal from "../../components/AddExerciseModal";
 import { useWorkouts } from "../../context/WorkoutsContext";
 
 export default function NewWorkout() {
@@ -10,8 +11,6 @@ export default function NewWorkout() {
   const [name, setName] = useState("");
   const [exercises, setExercises] = useState<Array<{ id: string; exerciseName: string; sets: string }>>([]);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
-  const [newExerciseName, setNewExerciseName] = useState("");
-  const [newExerciseSets, setNewExerciseSets] = useState("");
   const [restTime, setRestTime] = useState("90");
   
   const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
@@ -43,30 +42,6 @@ export default function NewWorkout() {
     router.back();
   }
 
-  function handleAddExercise() {
-    const trimmedName = newExerciseName.trim();
-    const setsNumber = Number(newExerciseSets);
-
-    if (!trimmedName) {
-      Alert.alert('Missing Exercise Name', 'Please enter an exercise name.');
-      return;
-    }
-
-    if (!setsNumber || setsNumber <= 0) {
-      Alert.alert('Invalid Sets', 'Please enter a valid number of sets.');
-      return;
-    }
-
-    setExercises((prev) => [
-      ...prev,
-      { id: Math.random().toString(36).slice(2), exerciseName: trimmedName, sets: setsNumber.toString() },
-    ]);
-
-    // Reset form and close modal
-    setNewExerciseName("");
-    setNewExerciseSets("");
-    setShowAddExerciseModal(false);
-  }
 
   function updateExerciseName(id: string, value: string) {
     setExercises((prev) => prev.map((e) => (e.id === id ? { ...e, exerciseName: value } : e)));
@@ -120,13 +95,7 @@ export default function NewWorkout() {
           keyboardType="number-pad"
           maxLength={3}
         />
-        <Pressable 
-          style={styles.addExerciseButton} 
-          onPress={() => setShowAddExerciseModal(true)}
-        >
-          <Text style={styles.addExerciseButtonText}>+ Add Exercise</Text>
-        </Pressable>
-
+        
         {exercises.map((ex, idx) => (
           <View
             key={ex.id}
@@ -136,9 +105,8 @@ export default function NewWorkout() {
             <View style={styles.exerciseInputs}>
               <TextInput
                 style={[styles.input, styles.exerciseNameInput]}
-                placeholder="Exercise name"
                 value={ex.exerciseName}
-                onChangeText={(t) => updateExerciseName(ex.id, t)}
+                editable={false}
               />
               <View style={styles.setsAndRemove}>
                 <TextInput
@@ -156,69 +124,42 @@ export default function NewWorkout() {
             </View>
           </View>
         ))}
+        
+        <Pressable 
+          style={styles.addExerciseButton} 
+          onPress={() => setShowAddExerciseModal(true)}
+        >
+          <Text style={styles.addExerciseButtonText}>+ Add Exercise</Text>
+        </Pressable>
+        
         <Pressable style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save</Text>
         </Pressable>
       </KeyboardAwareScrollView>
 
       {/* Add Exercise Modal */}
-      <Modal
+      <AddExerciseModal
         visible={showAddExerciseModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddExerciseModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.addExerciseModal}>
-            <Text style={styles.modalTitle}>Add Exercise</Text>
-            
-            <View style={styles.modalInputContainer}>
-              <Text style={styles.modalLabel}>Exercise Name</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="e.g., Bench Press"
-                value={newExerciseName}
-                onChangeText={setNewExerciseName}
-                placeholderTextColor="#6b7280"
-                autoFocus={true}
-              />
-            </View>
-
-            <View style={styles.modalInputContainer}>
-              <Text style={styles.modalLabel}>Number of Sets</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="e.g., 3"
-                value={newExerciseSets}
-                onChangeText={(text) => {
-                  const sanitized = text.replace(/[^0-9]/g, '');
-                  setNewExerciseSets(sanitized);
-                }}
-                keyboardType="number-pad"
-                maxLength={2}
-                placeholderTextColor="#6b7280"
-              />
-            </View>
-
-            <View style={styles.modalButtonContainer}>
-              <Pressable 
-                style={styles.modalCancelButton} 
-                onPress={() => {
-                  setNewExerciseName("");
-                  setNewExerciseSets("");
-                  setShowAddExerciseModal(false);
-                }}
-              >
-                <Text style={styles.modalCancelButtonText}>Cancel</Text>
-              </Pressable>
-              
-              <Pressable style={styles.modalAddButton} onPress={handleAddExercise}>
-                <Text style={styles.modalAddButtonText}>Add Exercise</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowAddExerciseModal(false)}
+        showSetsRepsForm={true}
+        onExerciseAdded={(exerciseId, exerciseName, sets, reps) => {
+          console.log('=== NEW.TSX CALLBACK CALLED ===');
+          console.log('Adding exercise to workout:', { exerciseId, exerciseName, sets, reps });
+          
+          // Add the exercise to the workout
+          setExercises((prev) => [
+            ...prev,
+            { 
+              id: exerciseId, 
+              exerciseName, 
+              sets: "" 
+            },
+          ]);
+          
+          console.log('Exercise added to workout, closing modal');
+          setShowAddExerciseModal(false);
+        }}
+      />
     </View>
   );
 }
@@ -230,7 +171,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    padding: 16,
+    padding: 20,
   },
   content: { 
     paddingBottom: 32,
@@ -238,48 +179,59 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: "700",
-    marginTop: 12,
-    marginBottom: 6,
+    fontWeight: "600",
+    marginTop: 16,
+    marginBottom: 8,
     color: "#cbd5e1",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#1f2937",
-    borderRadius: 10,
+    borderColor: "#334155",
+    borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#111827",
-    color: "#e5e7eb",
+    paddingVertical: 12,
+    backgroundColor: "#1e293b",
+    color: "#f8fafc",
+    fontSize: 16,
   },
   addExerciseButton: {
-    marginTop: 12,
-    backgroundColor: "#4b5563",
-    paddingVertical: 10,
+    marginTop: 16,
+    backgroundColor: "#1e293b",
+    paddingVertical: 12,
     alignItems: "center",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#6b7280",
+    borderColor: "#3b82f6",
   },
   addExerciseButtonText: {
-    color: "#e5e7eb",
-    fontSize: 14,
+    color: "#3b82f6",
+    fontSize: 16,
     fontWeight: "600",
   },
   exerciseRow: {
-    marginTop: 12,
+    marginTop: 8,
+    backgroundColor: "#1e293b",
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#334155",
   },
   exerciseIndex: {
-    fontWeight: "700",
-    marginBottom: 6,
-    color: "#cbd5e1",
+    fontWeight: "600",
+    marginBottom: 8,
+    color: "#3b82f6",
+    fontSize: 14,
   },
   exerciseInputs: {
     flexDirection: "row",
-    gap: 8,
+    gap: 12,
+    alignItems: "center",
   },
   exerciseNameInput: {
     flex: 1,
+    backgroundColor: "#111827",
+    borderColor: "#374151",
+    color: "#94a3b8",
   },
   setsAndRemove: {
     flexDirection: "row",
@@ -287,113 +239,36 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   setsInput: {
-    width: 90,
+    width: 80,
     textAlign: "center",
+    backgroundColor: "#111827",
+    borderColor: "#374151",
   },
   removeButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    backgroundColor: "#dc2626",
+    borderRadius: 6,
   },
   removeText: {
-    color: "#ef4444",
-    fontSize: 18,
-    fontWeight: "700",
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   saveButton: {
     marginTop: 24,
     marginBottom: 20,
-    backgroundColor: "#374151",
-    paddingVertical: 12,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 14,
     alignItems: "center",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#4b5563",
+    borderColor: "#2563eb",
   },
   saveButtonText: {
-    color: "#e5e7eb",
+    color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  addExerciseModal: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: '#334155',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    marginBottom: 100, // Move modal up to avoid keyboard
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#f3f4f6',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  modalInputContainer: {
-    marginBottom: 20,
-  },
-  modalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#cbd5e1',
-    marginBottom: 8,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#111827',
-    color: '#f3f4f6',
-    fontSize: 16,
-  },
-  modalButtonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  modalCancelButton: {
-    flex: 1,
-    backgroundColor: '#374151',
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#4b5563',
-  },
-  modalCancelButtonText: {
-    color: '#e5e7eb',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalAddButton: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#059669',
-  },
-  modalAddButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

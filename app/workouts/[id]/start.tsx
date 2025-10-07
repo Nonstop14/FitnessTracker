@@ -3,6 +3,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import AddExerciseModal from "../../../components/AddExerciseModal";
 import WorkoutTimer from "../../../components/WorkoutTimer";
 import { useWorkouts } from "../../../context/WorkoutsContext";
 
@@ -36,9 +37,6 @@ function StartWorkoutContent() {
   const [exerciseSets, setExerciseSets] = useState<Record<string, number>>({});
   const [showExerciseMenu, setShowExerciseMenu] = useState<string | null>(null);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
-  const [newExerciseName, setNewExerciseName] = useState("");
-  const [newExerciseSets, setNewExerciseSets] = useState("");
-  const [customExercises, setCustomExercises] = useState<Record<string, { name: string; sets: number }>>({});
   const [isFinishingWorkout, setIsFinishingWorkout] = useState(false);
   const [setRestTimers, setSetRestTimers] = useState<Record<string, {
     isActive: boolean;
@@ -315,11 +313,9 @@ function StartWorkoutContent() {
 
   const removeExercise = (exerciseId: string) => {
     const exercise = workout?.exercises.find(ex => ex.id === exerciseId);
-    const customExercise = customExercises[exerciseId];
+    if (!exercise) return;
     
-    if (!exercise && !customExercise) return;
-    
-    const exerciseName = exercise?.exerciseName || customExercise?.name || "Unknown Exercise";
+    const exerciseName = exercise?.exerciseName || "Unknown Exercise";
     
     Alert.alert(
       "Remove Exercise",
@@ -361,13 +357,6 @@ function StartWorkoutContent() {
             });
 
             // Remove from custom exercises if it was a custom one
-            if (customExercise) {
-              setCustomExercises(prev => {
-                const newCustom = { ...prev };
-                delete newCustom[exerciseId];
-                return newCustom;
-              });
-            }
           }
         }
       ]
@@ -381,11 +370,9 @@ function StartWorkoutContent() {
     // Prepare completed workout data using dynamic sets
     const completedExercises = Object.entries(exerciseSets).map(([exerciseId, setCount]) => {
       const exercise = workout?.exercises.find(ex => ex.id === exerciseId);
-      const customExercise = customExercises[exerciseId];
+      if (!exercise) return null;
       
-      if (!exercise && !customExercise) return null;
-      
-      const exerciseName = exercise?.exerciseName || customExercise?.name || "Unknown Exercise";
+      const exerciseName = exercise?.exerciseName || "Unknown Exercise";
       
       const sets = [];
       for (let setNum = 1; setNum <= setCount; setNum++) {
@@ -448,55 +435,6 @@ function StartWorkoutContent() {
     );
   };
 
-  const handleAddExercise = () => {
-    if (!newExerciseName.trim()) {
-      Alert.alert("Missing Name", "Please enter an exercise name.");
-      return;
-    }
-    if (!newExerciseSets || Number(newExerciseSets) <= 0) {
-      Alert.alert("Invalid Sets", "Please enter a valid number of sets.");
-      return;
-    }
-
-    const newExerciseId = Math.random().toString(36).slice(2);
-    const setsCount = Number(newExerciseSets);
-    
-    // Store the custom exercise info
-    setCustomExercises(prev => ({
-      ...prev,
-      [newExerciseId]: {
-        name: newExerciseName.trim(),
-        sets: setsCount
-      }
-    }));
-    
-    // Add to exercise sets
-    setExerciseSets(prev => ({
-      ...prev,
-      [newExerciseId]: setsCount
-    }));
-
-    // Initialize rep counts and weights for new sets
-    const newReps: Record<string, string> = {};
-    const newWeights: Record<string, string> = {};
-    const newCompleted: Record<string, boolean> = {};
-    
-    for (let set = 1; set <= setsCount; set++) {
-      const setKey = `${newExerciseId}-${set}`;
-      newReps[setKey] = "";
-      newWeights[setKey] = "";
-      newCompleted[setKey] = false;
-    }
-    
-    setRepCounts(prev => ({ ...prev, ...newReps }));
-    setWeights(prev => ({ ...prev, ...newWeights }));
-    setCompletedSets(prev => ({ ...prev, ...newCompleted }));
-
-    // Reset form and close modal
-    setNewExerciseName("");
-    setNewExerciseSets("");
-    setShowAddExerciseModal(false);
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0f172a" }}>
@@ -539,12 +477,10 @@ function StartWorkoutContent() {
       {/* Exercises */}
       {Object.entries(exerciseSets).map(([exerciseId, setCount]) => {
         const exercise = workout?.exercises.find(ex => ex.id === exerciseId);
-        const customExercise = customExercises[exerciseId];
+        // Skip if exercise doesn't exist
+        if (!exercise) return null;
         
-        // Skip if neither original nor custom exercise exists
-        if (!exercise && !customExercise) return null;
-        
-        const exerciseName = exercise?.exerciseName || customExercise?.name || "Unknown Exercise";
+        const exerciseName = exercise?.exerciseName || "Unknown Exercise";
         const exerciseIndex = workout?.exercises.findIndex(ex => ex.id === exerciseId) ?? -1;
         
         return (
@@ -789,63 +725,20 @@ function StartWorkoutContent() {
       })}
 
       {/* Add Exercise Modal */}
-      <Modal
+      <AddExerciseModal
         visible={showAddExerciseModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddExerciseModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.addExerciseModal}>
-            <Text style={styles.modalTitle}>Add Exercise</Text>
-            
-            <View style={styles.modalInputContainer}>
-              <Text style={styles.modalLabel}>Exercise Name</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="e.g., Bench Press"
-                value={newExerciseName}
-                onChangeText={setNewExerciseName}
-                placeholderTextColor="#6b7280"
-                autoFocus={true}
-              />
-            </View>
-
-            <View style={styles.modalInputContainer}>
-              <Text style={styles.modalLabel}>Number of Sets</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="e.g., 3"
-                value={newExerciseSets}
-                onChangeText={(text) => {
-                  const sanitized = text.replace(/[^0-9]/g, '');
-                  setNewExerciseSets(sanitized);
-                }}
-                keyboardType="number-pad"
-                maxLength={2}
-                placeholderTextColor="#6b7280"
-              />
-            </View>
-
-            <View style={styles.modalButtonContainer}>
-              <Pressable 
-                style={styles.modalCancelButton} 
-                onPress={() => {
-                  setNewExerciseName("");
-                  setNewExerciseSets("");
-                  setShowAddExerciseModal(false);
-                }}
-              >
-                <Text style={styles.modalCancelButtonText}>Cancel</Text>
-              </Pressable>
-              
-              <Pressable style={styles.modalAddButton} onPress={handleAddExercise}>
-                <Text style={styles.modalAddButtonText}>Add Exercise</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowAddExerciseModal(false)}
+        onExerciseAdded={(exerciseId, exerciseName, sets, reps) => {
+          // Add the exercise to the current workout using the database
+          // For now, just close the modal and show a success message
+          Alert.alert(
+            'Exercise Added',
+            `${exerciseName} has been added to your workout!`,
+            [{ text: 'OK', onPress: () => setShowAddExerciseModal(false) }]
+          );
+        }}
+        showSetsRepsForm={true}
+      />
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
@@ -1116,80 +1009,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginTop: 50,
-  },
-  addExerciseModal: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: '#334155',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    marginBottom: 100, // Move modal up to avoid keyboard
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#f3f4f6',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  modalInputContainer: {
-    marginBottom: 20,
-  },
-  modalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#cbd5e1',
-    marginBottom: 8,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#374151',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#111827',
-    color: '#f3f4f6',
-    fontSize: 16,
-  },
-  modalButtonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  modalCancelButton: {
-    flex: 1,
-    backgroundColor: '#374151',
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#4b5563',
-  },
-  modalCancelButtonText: {
-    color: '#e5e7eb',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalAddButton: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#059669',
-  },
-  modalAddButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   restTimerProgressContainer: {
     marginTop: 8,

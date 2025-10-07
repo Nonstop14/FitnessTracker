@@ -1,9 +1,11 @@
 import { Stack } from "expo-router";
+import { DatabaseProvider } from "../context/DatabaseContext";
 import { WorkoutsProvider } from "../context/WorkoutsContext";
 
 export default function RootLayout() {
   return (
-    <WorkoutsProvider>
+    <DatabaseProvider>
+      <WorkoutsProvider>
       <Stack initialRouteName="(tabs)">
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
@@ -46,7 +48,18 @@ export default function RootLayout() {
             headerTintColor: "#e2e8f0",
           }}
         />
+        <Stack.Screen
+          name="examples/DatabaseExample"
+          options={{
+            title: "Database Example",
+            headerBackTitle: "Back",
+            headerStyle: { backgroundColor: "#0f172a" },
+            headerTitleStyle: { color: "#e2e8f0" },
+            headerTintColor: "#e2e8f0",
+          }}
+        />
       </Stack>
-    </WorkoutsProvider>
+      </WorkoutsProvider>
+    </DatabaseProvider>
   );
 }
