@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Alert, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useRef, useState } from "react";
+import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useWorkouts } from "../../context/WorkoutsContext";
 
@@ -14,17 +14,9 @@ export default function NewWorkout() {
   const [newExerciseSets, setNewExerciseSets] = useState("");
   const [restTime, setRestTime] = useState("90");
   
-  const scrollViewRef = useRef<any>(null);
+  const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
+  const scrollPos = useRef(0);
 
-  useEffect(() => {
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      // Prevent auto-reset by doing nothing - let the scroll position stay where it is
-    });
-
-    return () => {
-      keyboardDidHideListener?.remove();
-    };
-  }, []);
 
   function handleSave() {
     const hasValidName = name.trim().length > 0;
@@ -96,14 +88,17 @@ export default function NewWorkout() {
         ref={scrollViewRef}
         style={styles.scrollContainer}
         contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={true}
-        extraScrollHeight={60}
-        keyboardOpeningTime={250}
-        enableOnAndroid={true}
+        onScroll={(e) => (scrollPos.current = e.nativeEvent.contentOffset.y)}
         enableAutomaticScroll={true}
-        extraHeight={80}
-        scrollEventThrottle={16}
+        enableOnAndroid={true}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        extraScrollHeight={30}
+        showsVerticalScrollIndicator={true}
+        enableResetScrollToCoords={false}
+        onKeyboardWillHide={() => {
+          scrollViewRef.current?.scrollToPosition(0, scrollPos.current, false);
+        }}
       >
         <Text style={styles.label}>Workout name</Text>
         <TextInput

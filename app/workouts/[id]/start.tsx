@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import WorkoutTimer from "../../../components/WorkoutTimer";
 import { useWorkouts } from "../../../context/WorkoutsContext";
@@ -48,17 +48,9 @@ function StartWorkoutContent() {
   const [editingTimer, setEditingTimer] = useState<string | null>(null);
   const [tempTimerDuration, setTempTimerDuration] = useState("");
   const positionsRef = useRef<Record<string, number>>({});
-  const scrollViewRef = useRef<any>(null);
+  const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
+  const scrollPos = useRef(0);
 
-  useEffect(() => {
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      // Prevent auto-reset by doing nothing - let the scroll position stay where it is
-    });
-
-    return () => {
-      keyboardDidHideListener?.remove();
-    };
-  }, []);
 
   // Timer effect
   useEffect(() => {
@@ -512,14 +504,17 @@ function StartWorkoutContent() {
         ref={scrollViewRef}
         style={styles.container} 
         contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={true}
-        extraScrollHeight={60}
-        keyboardOpeningTime={250}
-        enableOnAndroid={true}
+        onScroll={(e) => (scrollPos.current = e.nativeEvent.contentOffset.y)}
         enableAutomaticScroll={true}
-        extraHeight={80}
-        scrollEventThrottle={16}
+        enableOnAndroid={true}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        extraScrollHeight={30}
+        showsVerticalScrollIndicator={true}
+        enableResetScrollToCoords={false}
+        onKeyboardWillHide={() => {
+          scrollViewRef.current?.scrollToPosition(0, scrollPos.current, false);
+        }}
       >
       {/* Timer Section */}
       <WorkoutTimer 
